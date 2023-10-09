@@ -1037,6 +1037,7 @@ and read_signature_noenv env parent (items : Odoc_model.Compat.signature) =
             else shadowed
           in
             loop (ModuleType mtd :: acc, shadowed) rest
+#if OCAML_VERSION < (5,1,0)
     | Sig_class(id, cl, rec_status, _) :: Sig_class_type _
       :: Sig_type _ :: Sig_type _ :: rest ->
           let cl = read_class_declaration env parent id cl in
@@ -1054,6 +1055,25 @@ and read_signature_noenv env parent (items : Odoc_model.Compat.signature) =
           else shadowed
         in
         loop (ClassType (read_type_rec_status rec_status, cltyp)::acc, shadowed) rest
+#else
+     | Sig_class(id, cl, rec_status, _) :: Sig_class_type _
+       :: Sig_type _ :: rest ->
+        let cl = read_class_declaration env parent id cl in
+        let shadowed =
+          if Env.is_shadowed env id
+          then { shadowed with s_classes = Ident.name id :: shadowed.s_classes }
+          else shadowed
+        in
+        loop (Class (read_type_rec_status rec_status, cl)::acc, shadowed) rest
+     | Sig_class_type(id, cltyp, rec_status, _)::Sig_type _::rest ->
+        let cltyp = read_class_type_declaration env parent id cltyp in
+        let shadowed =
+          if Env.is_shadowed env id
+          then { shadowed with s_class_types = Ident.name id :: shadowed.s_class_types }
+          else shadowed
+        in
+        loop (ClassType (read_type_rec_status rec_status, cltyp)::acc, shadowed) rest
+#endif
     (* Skip all of the hidden sig items *)
 
 
